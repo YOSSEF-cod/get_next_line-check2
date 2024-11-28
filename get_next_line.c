@@ -12,87 +12,82 @@
 
 #include "get_next_line.h"
 
-static int	ft_strchar(char *str, char c)
+
+#include "get_next_line.h"
+
+int	ft_strchar(char	*str, char c)
 {
-	unsigned int	i;
+	int	i;
 
 	i = 0;
 	while (str[i])
 	{
 		if (str[i] == c)
-			return (1);
+			return 1;
 		i++;
 	}
-	return (0);
+	return 0;
 }
 
-static char	*chack_if_newline(char *line)
+char	*check_if_newline(char	*line)
 {
+	char	*save;
 	size_t	i;
-	char	*remainder;
 
 	i = 0;
-	while (line[i] && line[i] != '\n')
+	while (line[i] != '\0' && line[i] != '\n')
 		i++;
-	if (line[i] == '\0' || line[i + 1] == '\0')
+	if (line[i] == '\0')
+		return NULL;
+	save = ft_substr(line, i + 1, ft_strlen(line) - i);
+	if (!save)
 		return (NULL);
-	remainder = ft_substr(line, i + 1, ft_strlen(line) - i - 1);
 	line[i + 1] = '\0';
-	if (remainder && remainder[0] == '\0')
+	if (save && save[0] == '\0')
 	{
-		free(remainder);
-		remainder = NULL;
+		free(save);
+		save = NULL;
 	}
-	return (remainder);
+	return (save);
 }
-
-static char	*ft_full_buffer_line(int fd, char *buffer, char *remaider)
+char	*ft_full_buffer_line(int	fd, char	*buffer, char	*save)
 {
-	ssize_t	read_char;
+	ssize_t	len;
 	char	*ptr;
-
-	while (1)
+	while (!(ft_strchar(buffer, '\n')))
 	{
-		read_char = read(fd, buffer, BUFFER_SIZE);
-		if (read_char == -1)
-		{
-			free(remaider);
-			return (remaider = NULL, NULL);
-		}
-		else if (read_char == 0)
+		len = read(fd, buffer, BUFFER_SIZE);
+		if (len <= 0)
 			break ;
-		buffer[read_char] = '\0';
-		if (!remaider)
-			remaider = ft_strdup("");
-		ptr = remaider;
-		remaider = ft_strjoin(ptr, buffer);
+		buffer[len] = '\0';
+		if (!save)
+			save = ft_strdup("");
+		ptr = save;
+		save = ft_strjoin(ptr, buffer);
+		if (!save)
+			return (free(save), save = NULL, NULL);
 		free(ptr);
-		if (ft_strchar(buffer, '\n'))
-			break ;
-	}
-	return (remaider);
+		}
+	return (save);
 }
 
-char	*get_next_line(int fd)
+char	*get_next_line(int	fd)
 {
-	static char	*remainder;
-	char		*buffer;
-	char		*line;
-
-	if (fd < 0 || BUFFER_SIZE <= 0 || read(fd, 0, 0) == -1)
-	{
-		//free(remainder);
-		remainder = NULL;
+	static char *save;
+	char	*buffer;
+	char	*line;
+	if (fd < 0 || BUFFER_SIZE <= 0 ||  read(fd, NULL, 0) < 0)
 		return (NULL);
-	}
-	buffer = malloc((BUFFER_SIZE + 1));
+	buffer = malloc(BUFFER_SIZE + 1);
 	if (!buffer)
-		return (free(remainder), remainder = NULL, NULL);
-	line = ft_full_buffer_line(fd, buffer, remainder);
+		return (free(save), save = NULL, NULL);
+	line = ft_full_buffer_line(fd, buffer, save);
 	free(buffer);
 	buffer = NULL;
 	if (!line)
-		return (free(line), line = NULL, NULL);
-	remainder = chack_if_newline(line);
+		return NULL;
+	save = check_if_newline(line);
+	if (!save && ft_strlen(line) == 0)
+		return (NULL);
 	return (line);
 }
